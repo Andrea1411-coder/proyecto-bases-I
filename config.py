@@ -2,7 +2,7 @@ import os
 
 class Config:
     # Datos de conexión (según VM)
-    USUARIO   = os.getenv("DB_USER", "andrea_correa")
+    USER   = os.getenv("DB_USER", "andrea_correa")
     PASSWORD  = os.getenv("DB_PASSWORD", "andrea123")
     HOST      = os.getenv("DB_HOST", "192.168.40.16")   # IP Windows Server
     PORT      = os.getenv("DB_PORT", "15021")     
@@ -10,7 +10,7 @@ class Config:
 
 
     SQLALCHEMY_DATABASE_URI = (
-        f"oracle+oracledb://{USUARIO}:{PASSWORD}"
+        f"oracle+oracledb://{USER}:{PASSWORD}"
         f"@{HOST}:{PORT}/?service_name={SERVICIO}"
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False

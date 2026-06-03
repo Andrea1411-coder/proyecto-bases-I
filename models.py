@@ -1,4 +1,4 @@
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy #ORM 
 from sqlalchemy import (
     Column, Number, VARCHAR2, Date, BLOB, TIMESTAMP,
     ForeignKey, CheckConstraint, PrimaryKeyConstraint, ForeignKeyConstraint,
@@ -6,7 +6,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import relationship
 
-
+# Base de Datos
 db = SQLAlchemy()
 
 # ---> Sin FK
