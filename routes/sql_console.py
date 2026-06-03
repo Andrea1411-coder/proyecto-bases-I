@@ -171,7 +171,7 @@ def ejecutar():
     if not sql_raw:
         return jsonify({"error": "La consulta está vacía."}), 400
 
-    # Detectar tipo de sentencia
+   
     primera_palabra = sql_raw.upper().split()[0] if sql_raw.split() else ""
     es_select = primera_palabra in ("SELECT", "WITH", "SHOW")
 
