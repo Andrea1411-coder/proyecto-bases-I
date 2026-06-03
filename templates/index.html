@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block topbar_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="mb-4">
+  <h5 style="color:#fff;font-weight:700;margin-bottom:.25rem;">
+    <i class="bi bi-hospital me-2" style="color:var(--color-primary)"></i>
+    Sistema de Gestión — Consultorio Médico
+  </h5>
+  <p style="color:var(--color-muted);font-size:.82rem;">
+    Base de datos Oracle 19c · 22 tablas · Proyecto UPTC 2026
+  </p>
+</div>
+
+<!-- Stats cards -->
+<div class="row g-3 mb-4">
+  {% set stat_icons = {
+    'Pacientes':        ('bi-person-heart',    '#0f6ecd'),
+    'Profesionales':    ('bi-person-badge',    '#1aab6d'),
+    'Citas':            ('bi-calendar2-check', '#f0a83a'),
+    'Historias Clínicas':('bi-journal-medical','#9c71f5'),
+    'Diagnósticos':     ('bi-clipboard2-pulse','#e05c6a'),
+    'Tratamientos':     ('bi-capsule',         '#0dcaf0'),
+  } %}
+  {% for label, count in stats.items() %}
+    {% set icon_info = stat_icons.get(label, ('bi-table','#6b8499')) %}
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="stat-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <div class="stat-value">{{ count }}</div>
+            <div class="stat-label">{{ label }}</div>
+          </div>
+          <i class="bi {{ icon_info[0] }}" style="font-size:1.5rem;color:{{ icon_info[1] }};opacity:.8"></i>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<!-- Quick access -->
+<div class="row g-3">
+  <!-- Acciones rápidas -->
+  <div class="col-md-4">
+    <div class="panel h-100">
+      <div class="panel-header"><i class="bi bi-lightning-charge" style="color:var(--color-warning)"></i> Acceso Rápido</div>
+      <div class="panel-body">
+        <div class="d-flex flex-column gap-2">
+          <a href="{{ url_for('sql.consola') }}" class="btn-primary-custom" style="background:#1e3050;color:var(--color-accent);">
+            <i class="bi bi-terminal"></i> Abrir Consola SQL
+          </a>
+          <a href="{{ url_for('tablas.listar', nombre_tabla='PACIENTES') }}" class="btn-primary-custom" style="background:#1e3050;color:#fff;">
+            <i class="bi bi-person-heart"></i> Ver Pacientes
+          </a>
+          <a href="{{ url_for('tablas.listar', nombre_tabla='CITAS') }}" class="btn-primary-custom" style="background:#1e3050;color:#fff;">
+            <i class="bi bi-calendar2-check"></i> Ver Citas
+          </a>
+          <a href="{{ url_for('tablas.listar', nombre_tabla='PROFESIONALES') }}" class="btn-primary-custom" style="background:#1e3050;color:#fff;">
+            <i class="bi bi-person-badge"></i> Ver Profesionales
+          </a>
+          <a href="{{ url_for('joins.lista') }}" class="btn-primary-custom" style="background:#1e3050;color:#fff;">
+            <i class="bi bi-intersect"></i> Ver JOINs predefinidos
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tablas del modelo -->
+  <div class="col-md-8">
+    <div class="panel h-100">
+      <div class="panel-header"><i class="bi bi-diagram-3" style="color:var(--color-accent)"></i> Modelo de Datos — 22 Tablas</div>
+      <div class="panel-body">
+        <div class="row g-2">
+          {% set grupos = [
+            ('Catálogos (sin FK)', 'bi-bookmark', '#6b8499',
+              ['TIPOS_DOCUMENTOS','ESPECIALIDADES','ESTADOS_CITAS','TIPOS_CITAS',
+               'CONSULTORIOS','ACUDIENTES','DIAGNOSTICOS',
+               'PRESENTACIONES_MEDICAMENTOS','TIPOS_TERAPIAS','DIAS_SEMANAS']),
+            ('Entidades Principales', 'bi-person', '#0f6ecd',
+              ['PROFESIONALES','PACIENTES','TRATAMIENTOS']),
+            ('Relacionales Grupo 3', 'bi-diagram-2', '#1aab6d',
+              ['ESPECIALIDADES_PROFESIONALES','HORARIOS','PACIENTES_ACUDIENTES','HISTORIAS_CLINICAS']),
+            ('Clínicas Grupo 4', 'bi-clipboard2-pulse', '#9c71f5',
+              ['DIAGNOSTICOS_HISTORIAS','REMISIONES','FORMULAS_MEDICAS','CITAS']),
+            ('Grupo 5', 'bi-capsule', '#0dcaf0',
+              ['DETALLES_FORMULAS']),
+          ] %}
+          {% for grupo_nombre, icon, color, tablas in grupos %}
+          <div class="col-12">
+            <div style="font-size:.68rem;font-weight:700;color:{{ color }};text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;">
+              <i class="bi {{ icon }} me-1"></i>{{ grupo_nombre }}
+            </div>
+            <div class="d-flex flex-wrap gap-1 mb-1">
+              {% for t in tablas %}
+              <a href="{{ url_for('tablas.listar', nombre_tabla=t) }}"
+                 style="font-size:.7rem;font-family:var(--font-mono);background:rgba(255,255,255,.04);
+                        border:1px solid var(--color-border);border-radius:4px;padding:.2rem .5rem;
+                        color:var(--color-text);text-decoration:none;transition:all .15s;"
+                 onmouseover="this.style.borderColor='{{ color }}';this.style.color='{{ color }}'"
+                 onmouseout="this.style.borderColor='var(--color-border)';this.style.color='var(--color-text)'">
+                {{ t }}
+              </a>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+{% block title %}JOINs y GROUP BY{% endblock %}
+{% block topbar_title %}<i class="bi bi-intersect me-2"></i>JOINs y Funciones de Grupo{% endblock %}
+
+{% block extra_head %}
+<style>
+  .join-card {
+    background: var(--color-panel);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color .2s;
+    margin-bottom: .75rem;
+  }
+  .join-card:hover { border-color: rgba(15,110,205,.4); }
+
+  .join-header {
+    padding: .7rem 1rem;
+    display: flex; align-items: center; gap: .75rem;
+    cursor: pointer;
+    user-select: none;
+  }
+  .join-header:hover { background: rgba(255,255,255,.03); }
+
+  .join-body { border-top: 1px solid var(--color-border); }
+
+  .join-sql-pre {
+    margin: 0;
+    padding: .75rem 1rem;
+    font-family: var(--font-mono);
+    font-size: .78rem;
+    color: #a8d8ff;
+    background: #060f1a;
+    white-space: pre;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .join-actions {
+    padding: .6rem 1rem;
+    display: flex; align-items: center; gap: .6rem;
+  }
+
+  .btn-run {
+    background: var(--color-primary);
+    border: none; color: #fff;
+    font-size: .78rem; font-weight: 600;
+    padding: .38rem .9rem; border-radius: 6px;
+    cursor: pointer; display: inline-flex; align-items: center; gap: .35rem;
+    transition: opacity .15s;
+  }
+  .btn-run:hover { opacity: .85; }
+  .btn-run:disabled { opacity: .45; cursor: not-allowed; }
+
+  .btn-toggle-sql {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text); font-size: .75rem;
+    padding: .35rem .75rem; border-radius: 6px; cursor: pointer;
+    transition: background .15s;
+  }
+  .btn-toggle-sql:hover { background: rgba(255,255,255,.06); color:#fff; }
+
+  .result-area { display: none; border-top: 1px solid var(--color-border); }
+  .result-meta {
+    padding: .4rem 1rem;
+    font-size: .72rem; color: var(--color-muted);
+    border-bottom: 1px solid var(--color-border);
+    display: flex; align-items: center; gap: 1rem;
+  }
+  .result-scroll { overflow-x: auto; max-height: 340px; overflow-y: auto; }
+
+  /* Venn diagrams SVG mini */
+  .venn-icon { flex-shrink: 0; }
+
+  /* Tipo badges */
+  .tipo-inner { background:rgba(26,171,109,.12); color:#5fdd9d; border:1px solid rgba(26,171,109,.3); }
+  .tipo-left  { background:rgba(15,110,205,.12); color:var(--color-accent); border:1px solid rgba(15,110,205,.3); }
+  .tipo-group { background:rgba(240,168,58,.12); color:var(--color-warning); border:1px solid rgba(240,168,58,.3); }
+  .tipo-badge {
+    font-size:.65rem; font-weight:700; padding:.15rem .45rem;
+    border-radius:4px; white-space:nowrap;
+  }
+
+  .filter-tabs { display:flex; gap:.4rem; flex-wrap:wrap; margin-bottom:1rem; }
+  .filter-tab {
+    font-size:.75rem; padding:.3rem .8rem; border-radius:20px; cursor:pointer;
+    border:1px solid var(--color-border); background:transparent; color:var(--color-text);
+    transition:all .15s; text-decoration:none;
+  }
+  .filter-tab:hover { background:rgba(15,110,205,.15); color:#fff; }
+  .filter-tab.active { background:var(--color-primary); color:#fff; border-color:var(--color-primary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex align-items-start justify-content-between mb-3 flex-wrap gap-2">
+  <div>
+    <h6 style="color:#fff;font-weight:700;font-size:.95rem;margin-bottom:.1rem;">
+      Consultas predefinidas — JOINs &amp; GROUP BY
+    </h6>
+    <p style="font-size:.78rem;color:var(--color-muted);margin:0;">
+      {{ todos_los_joins|length }} consultas disponibles · Haz clic en ▶ Ejecutar para ver resultados
+    </p>
+  </div>
+</div>
+
+<!-- Filtro por tipo -->
+<div class="filter-tabs">
+  <a href="{{ url_for('joins.lista') }}"
+     class="filter-tab {% if not tipo_filtro %}active{% endif %}">
+    Todas ({{ todos_los_joins|length }})
+  </a>
+  {% for t in tipos %}
+  <a href="{{ url_for('joins.lista', tipo=t) }}"
+     class="filter-tab {% if tipo_filtro == t %}active{% endif %}">
+    {{ t }}
+    ({{ todos_los_joins | selectattr('tipo','eq',t) | list | length }})
+  </a>
+  {% endfor %}
+</div>
+
+<!-- JOIN cards -->
+{% for join in joins %}
+<div class="join-card" id="card-{{ join.id }}">
+  <div class="join-header" onclick="toggleSQL('{{ join.id }}')">
+    <!-- Mini venn icon -->
+    <div class="venn-icon">
+      {% if join.venn == 'inner' %}
+      <svg width="32" height="22" viewBox="0 0 32 22">
+        <circle cx="11" cy="11" r="9" fill="none" stroke="#1aab6d" stroke-width="1.5" opacity=".6"/>
+        <circle cx="21" cy="11" r="9" fill="none" stroke="#1aab6d" stroke-width="1.5" opacity=".6"/>
+        <path d="M16,3.5 a9,9 0 0,1 0,15 a9,9 0 0,1 0,-15" fill="#1aab6d" opacity=".3"/>
+      </svg>
+      {% elif join.venn == 'left' %}
+      <svg width="32" height="22" viewBox="0 0 32 22">
+        <circle cx="11" cy="11" r="9" fill="#0f6ecd" opacity=".3"/>
+        <circle cx="11" cy="11" r="9" fill="none" stroke="#0dcaf0" stroke-width="1.5"/>
+        <circle cx="21" cy="11" r="9" fill="none" stroke="#0dcaf0" stroke-width="1.5" opacity=".5"/>
+      </svg>
+      {% elif join.venn == 'left_only' %}
+      <svg width="32" height="22" viewBox="0 0 32 22">
+        <circle cx="11" cy="11" r="9" fill="#0f6ecd" opacity=".25"/>
+        <circle cx="21" cy="11" r="9" fill="#060f1a"/>
+        <circle cx="11" cy="11" r="9" fill="none" stroke="#0dcaf0" stroke-width="1.5"/>
+        <circle cx="21" cy="11" r="9" fill="none" stroke="#0dcaf0" stroke-width="1.5" opacity=".4"/>
+      </svg>
+      {% else %}
+      <svg width="32" height="22" viewBox="0 0 32 22">
+        <circle cx="11" cy="11" r="9" fill="#f0a83a" opacity=".2"/>
+        <circle cx="11" cy="11" r="9" fill="none" stroke="#f0a83a" stroke-width="1.5" opacity=".7"/>
+        <rect x="8" y="7" width="16" height="8" rx="2" fill="#f0a83a" opacity=".15"/>
+      </svg>
+      {% endif %}
+    </div>
+
+    <div style="flex:1;min-width:0;">
+      <div style="display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;">
+        <span style="font-size:.85rem;font-weight:600;color:#fff;">{{ join.titulo }}</span>
+        <span class="tipo-badge tipo-{{ 'inner' if join.tipo == 'INNER JOIN' else ('left' if 'LEFT' in join.tipo else 'group') }}">
+          {{ join.tipo }}
+        </span>
+      </div>
+      <div style="font-size:.72rem;color:var(--color-muted);margin-top:.15rem;">{{ join.descripcion }}</div>
+    </div>
+    <i class="bi bi-chevron-down" id="chevron-{{ join.id }}"
+       style="color:var(--color-muted);transition:transform .2s;flex-shrink:0;"></i>
+  </div>
+
+  <!-- SQL + botones (colapsable) -->
+  <div class="join-body" id="body-{{ join.id }}" style="display:none;">
+    <pre class="join-sql-pre">{{ join.sql }}</pre>
+    <div class="join-actions">
+      <button class="btn-run" id="btn-{{ join.id }}"
+              onclick="ejecutarJoin('{{ join.id }}')">
+        <i class="bi bi-play-fill"></i> Ejecutar
+      </button>
+      <span id="meta-{{ join.id }}" style="font-size:.72rem;color:var(--color-muted);"></span>
+    </div>
+    <!-- Resultado -->
+    <div class="result-area" id="result-{{ join.id }}">
+      <div class="result-meta">
+        <span id="res-count-{{ join.id }}"></span>
+        <span id="res-time-{{ join.id }}"></span>
+      </div>
+      <div class="result-scroll">
+        <div id="res-table-{{ join.id }}"></div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endfor %}
+
+{% if not joins %}
+<div style="padding:2rem;text-align:center;color:var(--color-muted);">
+  <i class="bi bi-inbox" style="font-size:2rem;display:block;margin-bottom:.5rem;"></i>
+  No hay consultas para el tipo seleccionado.
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function toggleSQL(id) {
+  const body    = document.getElementById('body-' + id);
+  const chevron = document.getElementById('chevron-' + id);
+  const visible = body.style.display !== 'none';
+  body.style.display = visible ? 'none' : 'block';
+  chevron.style.transform = visible ? '' : 'rotate(180deg)';
+}
+
+async function ejecutarJoin(id) {
+  const btn  = document.getElementById('btn-' + id);
+  const meta = document.getElementById('meta-' + id);
+  const resArea  = document.getElementById('result-' + id);
+  const resTable = document.getElementById('res-table-' + id);
+  const resCount = document.getElementById('res-count-' + id);
+  const resTime  = document.getElementById('res-time-' + id);
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Ejecutando...';
+  meta.textContent = '';
+  resArea.style.display = 'none';
+
+  const t0 = Date.now();
+  try {
+    const resp = await fetch('/joins/ejecutar/' + id, {method: 'POST'});
+    const data = await resp.json();
+    const ms = Date.now() - t0;
+
+    if (data.error) {
+      resTable.innerHTML = `<div class="m-3" style="background:rgba(224,92,106,.1);border:1px solid rgba(224,92,106,.3);
+        color:#f08090;border-radius:8px;padding:.75rem 1rem;font-family:var(--font-mono);font-size:.8rem;">
+        <i class="bi bi-x-circle me-2"></i>${escHTML(data.error)}</div>`;
+    } else {
+      resCount.innerHTML = `<span style="color:var(--color-accent);font-weight:600;">${data.total}</span> filas`;
+      resTime.textContent = `${ms} ms`;
+      resTable.innerHTML = buildTable(data.columnas, data.filas);
+    }
+    resArea.style.display = 'block';
+  } catch(e) {
+    meta.textContent = 'Error de red: ' + e.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="bi bi-play-fill"></i> Ejecutar';
+  }
+}
+
+function buildTable(cols, rows) {
+  if (!rows.length) return `<div style="padding:1.5rem;color:var(--color-muted);font-size:.82rem;text-align:center;">
+    <i class="bi bi-info-circle me-1"></i>Sin resultados.</div>`;
+
+  let h = `<table class="data-table"><thead><tr>`;
+  for (const c of cols) h += `<th>${escHTML(c)}</th>`;
+  h += `</tr></thead><tbody>`;
+  for (const row of rows) {
+    h += `<tr>`;
+    for (const v of row) h += `<td>${v === '' ? '<span style="color:var(--color-muted);font-style:italic;font-size:.75rem;">NULL</span>' : escHTML(v)}</td>`;
+    h += `</tr>`;
+  }
+  return h + `</tbody></table>`;
+}
+
+function escHTML(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// Abrir la primera card automáticamente
+window.addEventListener('DOMContentLoaded', () => {
+  const first = document.querySelector('.join-card');
+  if (first) {
+    const id = first.id.replace('card-','');
+    toggleSQL(id);
+  }
+});
+</script>
+{% endblock %}

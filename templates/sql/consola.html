@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block title %}Consola SQL{% endblock %}
+{% block topbar_title %}<i class="bi bi-terminal me-2"></i>Consola SQL Interactiva{% endblock %}
+
+{% block extra_head %}
+<style>
+  #sql-editor {
+    background: #060f1a;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    color: #a8d8ff;
+    font-family: var(--font-mono);
+    font-size: .85rem;
+    line-height: 1.6;
+    padding: 1rem;
+    resize: vertical;
+    width: 100%;
+    min-height: 160px;
+    transition: border-color .15s;
+  }
+  #sql-editor:focus { outline: none; border-color: var(--color-primary); }
+
+  #resultado-wrap { display: none; }
+
+  .resultado-meta {
+    font-size: .72rem;
+    color: var(--color-muted);
+    padding: .4rem .75rem;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .resultado-meta span { color: var(--color-accent); font-weight: 600; }
+
+  #btn-ejecutar {
+    background: var(--color-primary);
+    border: none; color: #fff;
+    font-size: .85rem; font-weight: 700;
+    padding: .55rem 1.4rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: .5rem;
+    transition: opacity .15s;
+    min-width: 140px; justify-content: center;
+  }
+  #btn-ejecutar:hover { opacity: .85; }
+  #btn-ejecutar:disabled { opacity: .5; cursor: not-allowed; }
+  #btn-limpiar {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text); font-size: .82rem;
+    padding: .5rem 1rem; border-radius: 8px; cursor: pointer;
+    transition: background .15s;
+  }
+  #btn-limpiar:hover { background: rgba(255,255,255,.06); }
+
+  .consulta-item {
+    padding: .35rem .75rem;
+    font-size: .78rem;
+    font-family: var(--font-mono);
+    color: var(--color-text);
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background .12s;
+    border-left: 2px solid transparent;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .consulta-item:hover {
+    background: rgba(15,110,205,.15);
+    border-left-color: var(--color-primary);
+    color: #fff;
+  }
+  .grupo-title {
+    font-size: .63rem; font-weight: 700;
+    text-transform: uppercase; letter-spacing: .08em;
+    color: var(--color-muted);
+    padding: .6rem .75rem .25rem;
+  }
+
+  #spinner { display: none; width: 14px; height: 14px; }
+  .dml-ok {
+    background: rgba(26,171,109,.1);
+    border: 1px solid rgba(26,171,109,.3);
+    color: #5fdd9d;
+    border-radius: 8px;
+    padding: .75rem 1rem;
+    font-size: .85rem;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .error-box {
+    background: rgba(224,92,106,.1);
+    border: 1px solid rgba(224,92,106,.3);
+    color: #f08090;
+    border-radius: 8px;
+    padding: .75rem 1rem;
+    font-size: .82rem;
+    font-family: var(--font-mono);
+    display: flex; align-items: flex-start; gap: .6rem;
+    white-space: pre-wrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row g-3" style="height:calc(100vh - 110px)">
+
+  <!-- Panel izquierdo: consultas predefinidas -->
+  <div class="col-md-3" style="overflow-y:auto;max-height:calc(100vh - 120px)">
+    <div class="panel h-100">
+      <div class="panel-header" style="font-size:.78rem;">
+        <i class="bi bi-bookmark-star" style="color:var(--color-warning)"></i>
+        Consultas Predefinidas
+      </div>
+      <div style="padding:.5rem 0;">
+        {% for grupo in consultas %}
+        <div class="grupo-title">{{ grupo.grupo }}</div>
+        {% for item in grupo.items %}
+        <div class="consulta-item" onclick="cargarConsulta({{ item.sql | tojson }})">
+          {{ item.nombre }}
+        </div>
+        {% endfor %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Panel derecho: editor + resultados -->
+  <div class="col-md-9 d-flex flex-column gap-3" style="overflow-y:auto;max-height:calc(100vh - 120px)">
+
+    <!-- Editor -->
+    <div class="panel">
+      <div class="panel-header">
+        <i class="bi bi-code-square" style="color:var(--color-accent)"></i>
+        Editor SQL
+        <span style="margin-left:auto;font-size:.68rem;color:var(--color-muted);font-weight:400;">
+          Oracle 19c · Schema: system
+        </span>
+      </div>
+      <div class="panel-body">
+        <textarea id="sql-editor" placeholder="Escribe tu consulta SQL aquí...
+Ej: SELECT * FROM PACIENTES
+    SELECT * FROM TAB
+    INSERT INTO ..."></textarea>
+        <div class="d-flex align-items-center gap-2 mt-2">
+          <button id="btn-ejecutar" onclick="ejecutarSQL()">
+            <svg id="spinner" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+            </svg>
+            <i class="bi bi-play-fill" id="play-icon"></i>
+            Ejecutar
+          </button>
+          <button id="btn-limpiar" onclick="limpiar()">
+            <i class="bi bi-trash3 me-1"></i>Limpiar
+          </button>
+          <span id="estado-msg" style="font-size:.75rem;color:var(--color-muted);margin-left:auto;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Resultados -->
+    <div id="resultado-wrap" class="panel" style="flex:1">
+      <div class="panel-header">
+        <i class="bi bi-table" style="color:var(--color-success)"></i>
+        Resultados
+        <div class="resultado-meta ms-2" style="border:none;padding:0;">
+          <span id="res-total"></span>
+          <span id="res-tipo"></span>
+        </div>
+      </div>
+      <div id="resultado-body" class="panel-body" style="padding:0;overflow-x:auto;"></div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+function cargarConsulta(sql) {
+  document.getElementById('sql-editor').value = sql;
+  document.getElementById('sql-editor').focus();
+}
+
+function limpiar() {
+  document.getElementById('sql-editor').value = '';
+  document.getElementById('resultado-wrap').style.display = 'none';
+  document.getElementById('estado-msg').textContent = '';
+  document.getElementById('sql-editor').focus();
+}
+
+async function ejecutarSQL() {
+  const sql = document.getElementById('sql-editor').value.trim();
+  if (!sql) return;
+
+  const btn = document.getElementById('btn-ejecutar');
+  const spinner = document.getElementById('spinner');
+  const playIcon = document.getElementById('play-icon');
+  const estado = document.getElementById('estado-msg');
+
+  btn.disabled = true;
+  spinner.style.display = 'block';
+  spinner.style.animation = 'spin 1s linear infinite';
+  playIcon.style.display = 'none';
+  estado.textContent = 'Ejecutando...';
+
+  // Animación spinner via CSS
+  if (!document.getElementById('spin-style')) {
+    const s = document.createElement('style');
+    s.id = 'spin-style';
+    s.textContent = '@keyframes spin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(s);
+  }
+
+  try {
+    const res = await fetch('/sql/ejecutar', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({sql})
+    });
+    const data = await res.json();
+    mostrarResultado(data);
+  } catch(e) {
+    mostrarResultado({error: 'Error de red: ' + e.message});
+  } finally {
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    playIcon.style.display = '';
+    estado.textContent = '';
+  }
+}
+
+function mostrarResultado(data) {
+  const wrap = document.getElementById('resultado-wrap');
+  const body = document.getElementById('resultado-body');
+  const resTotal = document.getElementById('res-total');
+  const resTipo  = document.getElementById('res-tipo');
+  wrap.style.display = 'block';
+
+  if (data.error) {
+    resTotal.textContent = '';
+    resTipo.textContent  = '';
+    body.innerHTML = `<div class="m-3 error-box"><i class="bi bi-x-circle-fill"></i><div>${escHTML(data.error)}</div></div>`;
+    return;
+  }
+
+  if (data.tipo === 'select') {
+    resTotal.innerHTML = `<span>${data.total}</span> filas`;
+    resTipo.innerHTML  = `<span>SELECT</span>`;
+
+    if (data.filas.length === 0) {
+      body.innerHTML = `<div class="m-3" style="color:var(--color-muted);font-size:.82rem;">
+        <i class="bi bi-info-circle me-1"></i>La consulta no retornó filas.</div>`;
+      return;
+    }
+
+    let html = `<div style="overflow-x:auto;max-height:420px;overflow-y:auto;">
+      <table class="data-table">
+        <thead><tr>`;
+    for (const col of data.columnas) {
+      html += `<th>${escHTML(col)}</th>`;
+    }
+    html += `</tr></thead><tbody>`;
+    for (const fila of data.filas) {
+      html += `<tr>`;
+      for (const val of fila) {
+        html += `<td>${escHTML(val)}</td>`;
+      }
+      html += `</tr>`;
+    }
+    html += `</tbody></table></div>`;
+    body.innerHTML = html;
+
+  } else {
+    resTotal.innerHTML = `<span>${data.filas_afectadas}</span> filas afectadas`;
+    resTipo.innerHTML  = `<span>DML</span>`;
+    body.innerHTML = `<div class="m-3 dml-ok">
+      <i class="bi bi-check-circle-fill"></i>${escHTML(data.mensaje)}</div>`;
+  }
+}
+
+function escHTML(str) {
+  return String(str)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Ctrl+Enter para ejecutar
+document.getElementById('sql-editor').addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+    e.preventDefault();
+    ejecutarSQL();
+  }
+});
+</script>
+{% endblock %}

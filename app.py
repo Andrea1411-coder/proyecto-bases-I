@@ -50,7 +50,6 @@ def create_app():
                     stats[label] = resultado
                 except Exception:
                     stats[label] = "No se pudo obtener el conteo"
-
         except Exception:
             pass
         return render_template('index.html', stats=stats)
