@@ -5,7 +5,7 @@ from models import TABLA_MODELOS
 
 principales_bp = Blueprint("principales", __name__)
 
-PRINCIPALES = [
+TABLAS_PRINCIPALES = [
     "TIPOS_DOCUMENTOS",
     "ESPECIALIDADES",
     "ESTADOS_CITAS",
@@ -21,7 +21,7 @@ PRINCIPALES = [
 @principales_bp.route("/")
 def index():
     return render_template("principales/index.html",
-                           catalogos=PRINCIPALES)
+                           catalogos=TABLAS_PRINCIPALES)
 
 @principales_bp.route("/<nombre>")
 def ver(nombre):
