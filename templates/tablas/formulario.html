@@ -134,8 +134,8 @@
             <input type="text" class="field-input {% if is_pk %}pk-field{% endif %}"
                    id="f_{{ col.name }}" name="{{ col.name }}"
                    value="{{ curr_val }}"
-                   placeholder="YYYY-MM-DD{% if 'TIMESTAMP' in col.type %} HH:MM:SS{% endif %}"/>
-            <span class="field-hint">Formato: {% if 'TIMESTAMP' in col.type %}YYYY-MM-DD HH:MM:SS{% else %}YYYY-MM-DD{% endif %}</span>
+                   placeholder="DD-MM-YY{% if 'TIMESTAMP' in col.type %} HH:MM:SS {% endif %}"/>
+            <span class="field-hint">Formato: {% if 'TIMESTAMP' in col.type %} HH:MM:SS {% else %} DD-MM-YY {% endif %}</span>
 
           {% elif col.type == 'NUMBER' %}
             <input type="number" step="any" class="field-input {% if is_pk %}pk-field{% endif %}"

@@ -1,11 +1,14 @@
 from flask_sqlalchemy import SQLAlchemy #ORM 
 from sqlalchemy import (
-    Column, Number, VARCHAR2, Date, BLOB, TIMESTAMP,
+    Column, Date, BLOB,
     ForeignKey, CheckConstraint, PrimaryKeyConstraint, ForeignKeyConstraint,
     String, Integer, LargeBinary, DateTime, Text,
 )
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import Numeric
 
+VARCHAR2 = String
+TIMESTAMP = DateTime
 # Base de Datos
 db = SQLAlchemy()
 

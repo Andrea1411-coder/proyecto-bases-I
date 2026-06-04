@@ -3,13 +3,14 @@
 from flask import Blueprint, render_template, request,jsonify
 from sqlalchemy import text
 from models import db
+import json
 
 sql_bp = Blueprint('sql', __name__)
 
 CONSULTAS_PREDEFINIDAS = [
     {
         "grupo": "CRUD - Pacientes",
-        "items": [
+        "consultas": [
             {"nombre": "SELECT todos los pacientes",
              "sql": "SELECT * FROM PACIENTES"},
             {"nombre": "SELECT paciente por ID",
@@ -26,7 +27,7 @@ CONSULTAS_PREDEFINIDAS = [
     },
     {
         "grupo": "CRUD - Profesionales",
-        "items": [
+        "consultas": [
             {"nombre": "SELECT todos los profesionales",
              "sql": "SELECT * FROM PROFESIONALES"},
             {"nombre": "INSERT profesional",
@@ -40,7 +41,7 @@ CONSULTAS_PREDEFINIDAS = [
     },
     {
         "grupo": "CRUD — Citas",
-        "items": [
+        "consultas": [
             {"nombre": "SELECT todas las citas",
              "sql": "SELECT * FROM CITAS"},
             {"nombre": "SELECT citas de hoy",
@@ -49,7 +50,7 @@ CONSULTAS_PREDEFINIDAS = [
     },
     {
         "grupo": "INNER JOIN",
-        "items": [
+        "consultas": [
             {"nombre": "Citas con paciente y profesional",
              "sql": """SELECT P.nombre_paciente, PR.nombre_profesional,
             C.fecha_cita, C.motivo_cita
@@ -83,7 +84,7 @@ CONSULTAS_PREDEFINIDAS = [
     },
     {
         "grupo": "LEFT JOIN",
-        "items": [
+        "consultas": [
             {"nombre": "Pacientes con o sin citas",
              "sql": """SELECT P.nombre_paciente, C.fecha_cita, C.motivo_cita
                 FROM PACIENTES P
@@ -102,7 +103,7 @@ CONSULTAS_PREDEFINIDAS = [
     },
     {
         "grupo": "GROUP BY / Funciones de Grupo",
-        "items": [
+        "consultas": [
                 {"nombre": "Citas por profesional (ORDER BY total DESC)",
                 "sql": """SELECT PR.nombre_profesional,
                 COUNT(*) AS total_citas
@@ -143,7 +144,7 @@ CONSULTAS_PREDEFINIDAS = [
     },
     {
         "grupo": "Verificación de esquema",
-        "items": [
+        "consultas": [
             {"nombre": "Ver todas las tablas del usuario",
              "sql": "SELECT * FROM TAB"},
             {"nombre": "Ver PRIMARY KEYs",
@@ -159,10 +160,14 @@ CONSULTAS_PREDEFINIDAS = [
 
 ]
 
+
+
 @sql_bp.route("/", methods=["GET"])
 def consola():
+    queries_json = json.dumps(CONSULTAS_PREDEFINIDAS, ensure_ascii=False)
     return render_template("sql/consola.html",
-                           consultas=CONSULTAS_PREDEFINIDAS)
+                           consultas=CONSULTAS_PREDEFINIDAS,
+                           queries_json=queries_json)
 
 
 @sql_bp.route("/ejecutar", methods=["POST"])

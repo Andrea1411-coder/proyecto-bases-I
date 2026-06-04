@@ -117,8 +117,8 @@
       <div style="padding:.5rem 0;">
         {% for grupo in consultas %}
         <div class="grupo-title">{{ grupo.grupo }}</div>
-        {% for item in grupo.items %}
-        <div class="consulta-item" data-sql="{{ item.sql | e('html_attr') }}">
+        {% for item in grupo.consultas %}
+        <div class="consulta-item">
           {{ item.nombre }}
         </div>
         {% endfor %}
@@ -179,14 +179,22 @@ Ej: SELECT * FROM PACIENTES
 
 {% block extra_scripts %}
 <script>
-function cargarConsulta(sql) {
-  document.getElementById('sql-editor').value = sql;
-  document.getElementById('sql-editor').focus();
+const CONSULTAS = {{ queries_json | safe }};
+
+const QUERIES_FLAT = [];
+for (const grupo of CONSULTAS) {
+  for (const item of grupo.consultas) {
+    QUERIES_FLAT.push(item.sql);
+  }
 }
 
-document.querySelectorAll('.consulta-item').forEach(el => {
-  el.addEventListener('click', () => cargarConsulta(el.dataset.sql));
+document.querySelectorAll('.consulta-item').forEach((el, idx) => {
+  el.addEventListener('click', () => {
+    document.getElementById('sql-editor').value = QUERIES_FLAT[idx];
+    document.getElementById('sql-editor').focus();
+  });
 });
+
 
 function limpiar() {
   document.getElementById('sql-editor').value = '';
