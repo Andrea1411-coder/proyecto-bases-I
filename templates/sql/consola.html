@@ -118,7 +118,7 @@
         {% for grupo in consultas %}
         <div class="grupo-title">{{ grupo.grupo }}</div>
         {% for item in grupo.items %}
-        <div class="consulta-item" onclick="cargarConsulta({{ item.sql | tojson }})">
+        <div class="consulta-item" data-sql="{{ item.sql | e('html_attr') }}">
           {{ item.nombre }}
         </div>
         {% endfor %}
@@ -183,6 +183,10 @@ function cargarConsulta(sql) {
   document.getElementById('sql-editor').value = sql;
   document.getElementById('sql-editor').focus();
 }
+
+document.querySelectorAll('.consulta-item').forEach(el => {
+  el.addEventListener('click', () => cargarConsulta(el.dataset.sql));
+});
 
 function limpiar() {
   document.getElementById('sql-editor').value = '';

@@ -22,6 +22,7 @@
     'Historias Clínicas':('bi-journal-medical','#9c71f5'),
     'Diagnósticos':     ('bi-clipboard2-pulse','#e05c6a'),
     'Tratamientos':     ('bi-capsule',         '#0dcaf0'),
+    'Consultorios':     ('bi-people-fill',     '#0f6ecd'),
   } %}
   {% for label, count in stats.items() %}
     {% set icon_info = stat_icons.get(label, ('bi-table','#6b8499')) %}
@@ -32,14 +33,14 @@
             <div class="stat-value">{{ count }}</div>
             <div class="stat-label">{{ label }}</div>
           </div>
-          <i class="bi {{ icon_info[0] }}" style="font-size:1.5rem;color:{{ icon_info[1] }};opacity:.8"></i>
+          <i class="bi {{ icon_info[0] }}" style="font-size:1.5rem;opacity:.8" data-color="{{ icon_info[1] }}"></i>
         </div>
       </div>
     </div>
   {% endfor %}
 </div>
 
-<!-- Quick access -->
+
 <div class="row g-3">
   <!-- Acciones rápidas -->
   <div class="col-md-4">
@@ -89,7 +90,7 @@
           ] %}
           {% for grupo_nombre, icon, color, tablas in grupos %}
           <div class="col-12">
-            <div style="font-size:.68rem;font-weight:700;color:{{ color }};text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;">
+            <div style="font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:.35rem;" data-color="{{ color }}">
               <i class="bi {{ icon }} me-1"></i>{{ grupo_nombre }}
             </div>
             <div class="d-flex flex-wrap gap-1 mb-1">
@@ -112,3 +113,9 @@
   </div>
 </div>
 {% endblock %}
+
+<script>
+document.querySelectorAll('[data-color]').forEach(el => {
+  el.style.color = el.dataset.color;
+});
+</script>

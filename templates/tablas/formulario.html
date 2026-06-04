@@ -90,7 +90,7 @@
 <div class="panel" style="max-width:900px;">
   <div class="panel-header">
     <i class="bi bi-{{ 'plus-circle' if modo == 'INSERT' else 'pencil-square' }}"
-       style="color:var(--color-{{ 'success' if modo == 'INSERT' else 'accent' }})"></i>
+       data-color="{{ 'var(--color-success)' if modo == 'INSERT' else 'var(--color-accent)' }}"></i>
     {{ 'Insertar nuevo registro' if modo == 'INSERT' else 'Actualizar registro' }}
     {% if modo == 'UPDATE' and pk_valores %}
       <span style="font-size:.72rem;color:var(--color-muted);margin-left:.5rem;">
@@ -101,7 +101,7 @@
   <div class="panel-body">
 
     <form method="POST">
-      <!-- En UPDATE pasar PKs como hidden si no están en el form -->
+
       {% if modo == 'UPDATE' and pk_valores %}
         {% for pk, val in pk_valores.items() %}
         <input type="hidden" name="{{ pk }}" value="{{ val }}"/>
@@ -164,7 +164,7 @@
 
       <!-- Botones -->
       <div class="d-flex align-items-center gap-2">
-        <button type="submit" class="btn-primary-custom" style="background:{% if modo == 'INSERT' %}var(--color-success){% else %}var(--color-primary){% endif %}">
+        <button type="submit" class="btn-primary-custom" data-bg="{{ 'var(--color-success)' if modo == 'INSERT' else 'var(--color-primary)' }}">
           <i class="bi bi-{{ 'check-lg' if modo == 'UPDATE' else 'plus-lg' }}"></i>
           {{ 'Guardar cambios' if modo == 'UPDATE' else 'Insertar registro' }}
         </button>
@@ -176,4 +176,13 @@
 
   </div>
 </div>
+<script>
+document.querySelectorAll('[data-color]').forEach(el => {
+  el.style.color = el.dataset.color;
+});
+document.querySelectorAll('[data-bg]').forEach(el => {
+  el.style.background = el.dataset.bg;
+});
+</script>
 {% endblock %}
+

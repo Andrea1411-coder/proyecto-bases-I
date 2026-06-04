@@ -83,7 +83,7 @@
   </div>
 </div>
 
-<!-- Filter bar -->
+
 <form method="GET" class="filter-bar">
   <input type="text" name="filtro" value="{{ filtro }}"
          placeholder="Filtro WHERE libre · ej: nombre_paciente LIKE '%Ana%'"/>
@@ -168,7 +168,7 @@
   </div>
 </div>
 
-<!-- Pagination -->
+
 {% if total_pages > 1 %}
 <div class="pagination-bar mt-2">
   <a href="?page=1&filtro={{ filtro }}" class="page-btn {% if page == 1 %}disabled{% endif %}">
@@ -194,11 +194,4 @@
   </span>
 </div>
 {% endif %}
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-// Registrar función enumerate para Jinja2 — no aplica en Python/Jinja2
-// Solo como referencia; enumerate ya viene en el context de Jinja2 vía Python.
-</script>
 {% endblock %}

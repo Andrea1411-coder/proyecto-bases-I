@@ -6,8 +6,8 @@ from models import db
 
 def create_app():
     app = Flask(__name__)
-    app.config.from_object(Config)
-    db.init_app(app)
+    app.config.from_object(Config) #Cargar cadena de conexion
+    db.init_app(app) # SQLAlchemy con Flask
 
     app.jinja_env.globals.update( #motor de Flask para renderizar HTML
         enumerate = enumerate,
