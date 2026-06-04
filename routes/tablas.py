@@ -4,6 +4,7 @@ from flask import (Blueprint, render_template, request, redirect, url_for, flash
 from sqlalchemy import text, inspect
 from models import db, TABLA_MODELOS
 from config import Config
+from datetime import date, datetime
 
 tablas_bp = Blueprint("tablas", __name__)
 
@@ -42,7 +43,48 @@ def pk_tabla(nombre_tabla: str) -> list[str]:
         rows = conn.execute(sql, {"t": nombre_tabla.upper()}).fetchall()
     return [r[0] for r in rows]
 
-# Listado
+
+def formatear_valor(val, col_type):
+    """Convierte valores de tablas a formato adecuado para mostrarlos.
+       DATE     → DD-MM-YYYY
+       TIMESTAMP → HH:MM:SS
+       resto    → str normal
+    """
+    if val is None:
+        return ""
+ 
+    if col_type == "DATE":
+        if isinstance(val, (date, datetime)):
+            return val.strftime("%d-%m-%Y")
+        s = str(val)[:10]                     
+        partes = s.split("-")
+        if len(partes) == 3:
+            return f"{partes[2]}-{partes[1]}-{partes[0]}"
+        return s
+ 
+    if "TIMESTAMP" in col_type:
+        if isinstance(val, datetime):
+            return val.strftime("%H:%M:%S")
+        s = str(val)
+        if " " in s:
+            return s.split(" ")[1][:8]
+        return s[:8]
+ 
+    return str(val)
+
+def expr_valor(col_name: str, col_type: str, valor) -> str:
+    """Convierte valores de tablas a formato adecuado para mostrarlos.
+       DATE      → TO_DATE(:col, 'DD-MM-YYYY')
+       TIMESTAMP → TO_TIMESTAMP(:col, 'HH24:MI:SS')
+       resto     → :col
+    """
+    if valor is None:
+        return f":{col_name}"
+    if col_type == "DATE":
+        return f"TO_DATE(:{col_name}, 'DD-MM-YYYY')"
+    if "TIMESTAMP" in col_type:
+        return f"TO_TIMESTAMP(:{col_name}, 'HH24:MI:SS')"
+    return f":{col_name}"
 
 @tablas_bp.route("/<nombre_tabla>")
 def listar(nombre_tabla):
@@ -58,12 +100,11 @@ def listar(nombre_tabla):
     columnas  = columnas_tabla(nombre_tabla)
     pks       = pk_tabla(nombre_tabla)
     col_names = [c["name"] for c in columnas]
+    col_types = {c["name"]: c["type"] for c in columnas}
 
     # Construir SELECT con WHERE
-    where_clause = ""
-    if filtro:
-        where_clause = f" WHERE {filtro}"
-
+    where_clause = f" WHERE {filtro}" if filtro else ""
+ 
     count_sql = text(f"SELECT COUNT(*) FROM {nombre_tabla}{where_clause}")
     data_sql  = text(
         f"SELECT * FROM (SELECT a.*, ROWNUM rn FROM "
@@ -81,7 +122,13 @@ def listar(nombre_tabla):
             inicio = (page - 1) * per_page
             fin    = inicio + per_page
             rows   = conn.execute(data_sql, {"ini": inicio, "fin": fin}).fetchall()
-            filas = [[str(v) if v is not None else "" for v in row[:-1]] for row in rows]
+            filas = [
+                [
+                    formatear_valor(row[i], col_types.get(col_names[i], ""))
+                    for i in range(len(col_names))
+                ]
+                for row in rows
+            ]
     except Exception as exc:
         error = str(exc)
 
@@ -92,6 +139,7 @@ def listar(nombre_tabla):
         nombre_tabla = nombre_tabla,
         tablas       = sorted(TABLA_MODELOS.keys()),
         columnas     = col_names,
+        col_types    = col_types,
         filas        = filas,
         pks          = pks,
         page         = page,
@@ -118,8 +166,12 @@ def insertar(nombre_tabla):
             else:
                 valores[col["name"]] = val
 
+        col_tipo_map = {c["name"]: c["type"] for c in columnas}
         cols_str = ", ".join(valores.keys())
-        vals_str = ", ".join([f":{k}" for k in valores.keys()])
+        vals_str = ", ".join(
+            expr_valor(k, col_tipo_map.get(k, ""), v)
+            for k, v in valores.items()
+        )
         sql = text(f"INSERT INTO {nombre_tabla} ({cols_str}) VALUES ({vals_str})")
 
         try:
@@ -148,8 +200,7 @@ def editar(nombre_tabla):
     pks      = pk_tabla(nombre_tabla)
 
     # Construir WHERE por PKs
-    pk_valores = {pk: request.args.get(pk) or request.form.get(pk)
-                  for pk in pks}
+    pk_valores = {pk: request.args.get(pk) or request.form.get(pk) for pk in pks}
     where_clause = " AND ".join([f"{pk} = :{pk}" for pk in pks])
 
     if request.method == "POST":
@@ -158,8 +209,9 @@ def editar(nombre_tabla):
             val = request.form.get(col["name"], "").strip()
             valores[col["name"]] = None if val == "" else val
 
+        col_tipo_map = {c["name"]: c["type"] for c in columnas}
         set_clause = ", ".join([
-            f"{c['name']} = :{c['name']}"
+            f"{c['name']} = {expr_valor(c['name'], col_tipo_map.get(c['name'],''), valores.get(c['name']))}"
             for c in columnas if c["name"] not in pks
         ])
         sql = text(f"UPDATE {nombre_tabla} SET {set_clause} WHERE {where_clause}")
@@ -181,9 +233,30 @@ def editar(nombre_tabla):
         with db.engine.connect() as conn:
             row = conn.execute(sel_sql, pk_valores).fetchone()
             if row:
-                col_names = columnas_tabla(nombre_tabla)
-                for i, col in enumerate(col_names):
-                    valores_actuales[col["name"]] = "" if row[i] is None else str(row[i])
+                for i, col in enumerate(columnas):
+                    val = row[i]
+                    if val is None:
+                        valores_actuales[col["name"]] = ""
+                    elif col["type"] == "DATE":
+                        if isinstance(val, (date, datetime)):
+                            valores_actuales[col["name"]] = val.strftime("%d-%m-%Y")
+                        else:
+                            s = str(val)[:10]
+                            partes = s.split("-")
+                            valores_actuales[col["name"]] = (
+                                f"{partes[2]}-{partes[1]}-{partes[0]}"
+                                if len(partes) == 3 else s
+                            )
+                    elif "TIMESTAMP" in col["type"]:
+                        if isinstance(val, datetime):
+                            valores_actuales[col["name"]] = val.strftime("%H:%M:%S")
+                        else:
+                            s = str(val)
+                            valores_actuales[col["name"]] = (
+                                s.split(" ")[1][:8] if " " in s else s[:8]
+                            )
+                    else:
+                        valores_actuales[col["name"]] = str(val)
     except Exception as exc:
         flash(f"Error al cargar registro: {exc}", "danger")
 

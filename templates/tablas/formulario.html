@@ -113,6 +113,8 @@
         {% set is_pk  = col.name in pks %}
         {% set is_req = not col.nullable and not is_pk %}
         {% set curr_val = valores.get(col.name, '') %}
+        {% set es_fecha = col.type == 'DATE' %} 
+        {% set es_timestamp = 'TIMESTAMP' in col.type %}
 
         <div class="field-wrap">
           <label class="field-label" for="f_{{ col.name }}">
@@ -130,12 +132,25 @@
                    placeholder="BLOB — dejar vacío o pegar Base64"/>
             <span class="field-hint">Columna tipo BLOB (imagen/archivo)</span>
 
-          {% elif col.type == 'DATE' or 'TIMESTAMP' in col.type %}
+          {% elif es_fecha %}
             <input type="text" class="field-input {% if is_pk %}pk-field{% endif %}"
                    id="f_{{ col.name }}" name="{{ col.name }}"
                    value="{{ curr_val }}"
-                   placeholder="DD-MM-YY{% if 'TIMESTAMP' in col.type %} HH:MM:SS {% endif %}"/>
-            <span class="field-hint">Formato: {% if 'TIMESTAMP' in col.type %} HH:MM:SS {% else %} DD-MM-YY {% endif %}</span>
+                   placeholder="DD-MM-YYYY"
+                   {% if is_req %}required{% endif %}/>
+            <span class="field-hint">
+              <i class="bi bi-calendar3 me-1"></i>Formato: DD-MM-YYYY &nbsp;·&nbsp; Ej: 20-06-2025
+            </span>
+
+          {% elif es_timestamp %}
+            <input type="text" class="field-input {% if is_pk %}pk-field{% endif %}"
+                   id="f_{{ col.name }}" name="{{ col.name }}"
+                   value="{{ curr_val }}"
+                   placeholder="HH:MM:SS"
+                   {% if is_req %}required{% endif %}/>
+            <span class="field-hint">
+              <i class="bi bi-clock me-1"></i>Formato: HH:MM:SS &nbsp;·&nbsp; Ej: 08:30:00
+            </span>
 
           {% elif col.type == 'NUMBER' %}
             <input type="number" step="any" class="field-input {% if is_pk %}pk-field{% endif %}"
@@ -153,10 +168,15 @@
                    placeholder="{{ col.name }}{% if col.length %} (max {{ col.length }}){% endif %}"/>
           {% endif %}
 
-          {% if col.length and col.type not in ('NUMBER','DATE','BLOB') %}
-          <span class="field-hint">{{ col.type }}({{ col.length }})</span>
+
+          {% if col.type == 'DATE' %}
+            {# hint ya incluido arriba #}
+          {% elif es_timestamp %}
+            {# hint ya incluido arriba #}
+          {% elif col.length and col.type not in ('NUMBER','DATE','BLOB') %}
+            <span class="field-hint">{{ col.type }}({{ col.length }})</span>
           {% elif col.type %}
-          <span class="field-hint">{{ col.type }}</span>
+            <span class="field-hint">{{ col.type }}</span>
           {% endif %}
         </div>
         {% endfor %}
